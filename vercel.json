@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "api/[[...path]].js": {
+      "includeFiles": "dist/**"
+    }
+  },
+  "rewrites": [
+    { "source": "/:path*", "destination": "/api/[[...path]].js" }
+  ]
+}
