@@ -8,7 +8,7 @@ export class User {
   @Prop({ default: 'google' })
   authProvider: 'google' | 'password';
 
-  @Prop({ unique: true, sparse: true })
+  @Prop()
   googleId?: string;
 
   @Prop({ required: true, unique: true })
@@ -52,3 +52,10 @@ export class User {
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
+UserSchema.index(
+  { googleId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { googleId: { $type: 'string' } },
+  },
+);
