@@ -156,6 +156,29 @@ export class UsersService {
       .exec();
   }
 
+  async getFirstTaskStatus(userId: string): Promise<UserDocument | null> {
+    return this.userModel.findById(userId).exec();
+  }
+
+  async lockFirstTask(userId: string): Promise<UserDocument | null> {
+    const user = await this.userModel.findById(userId).exec();
+    if (!user) {
+      return null;
+    }
+    if (!user.firstTaskCompletedAt) {
+      user.firstTaskCompletedAt = new Date();
+      await user.save();
+    }
+    return user;
+  }
+
+  async getFirstTaskResults(): Promise<UserDocument[]> {
+    return this.userModel
+      .find({ firstTaskCompletedAt: { $ne: null } })
+      .sort({ firstTaskCompletedAt: 1 })
+      .exec();
+  }
+
   private configureCloudinary(cloudinaryUrl: string) {
     try {
       const parsed = new URL(cloudinaryUrl);

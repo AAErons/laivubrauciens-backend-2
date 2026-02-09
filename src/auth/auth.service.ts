@@ -57,6 +57,7 @@ export class AuthService {
         pastExperience: user.pastExperience,
         showProfile: user.showProfile,
         picture: user.picture,
+        firstTaskCompletedAt: user.firstTaskCompletedAt,
       },
     };
   }
@@ -104,6 +105,7 @@ export class AuthService {
         pastExperience: user.pastExperience,
         showProfile: user.showProfile,
         picture: user.picture,
+        firstTaskCompletedAt: user.firstTaskCompletedAt,
       },
     };
   }
@@ -141,6 +143,7 @@ export class AuthService {
         pastExperience: user.pastExperience,
         showProfile: user.showProfile,
         picture: user.picture,
+        firstTaskCompletedAt: user.firstTaskCompletedAt,
       },
     };
   }

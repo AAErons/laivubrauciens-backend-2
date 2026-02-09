@@ -49,6 +49,9 @@ export class User {
 
   @Prop()
   passwordHash?: string;
+
+  @Prop()
+  firstTaskCompletedAt?: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

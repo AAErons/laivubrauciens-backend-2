@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Header, Post, Query } from '@nestjs/common';
 
 import { UsersService } from './users.service';
 
@@ -63,6 +63,7 @@ export class UsersController {
         pastExperience: user.pastExperience,
         showProfile: user.showProfile,
         picture: user.picture,
+        firstTaskCompletedAt: user.firstTaskCompletedAt,
       },
     };
   }
@@ -107,7 +108,33 @@ export class UsersController {
         participationYears: user.participationYears,
         showProfile: user.showProfile,
         picture: user.picture,
+        firstTaskCompletedAt: user.firstTaskCompletedAt,
       },
+    };
+  }
+
+  @Get('first-task')
+  async getFirstTaskStatus(@Query('userId') userId?: string) {
+    if (!userId) {
+      return { completed: false, firstTaskCompletedAt: null };
+    }
+    const user = await this.usersService.getFirstTaskStatus(userId);
+    return {
+      completed: Boolean(user?.firstTaskCompletedAt),
+      firstTaskCompletedAt: user?.firstTaskCompletedAt ?? null,
+    };
+  }
+
+  @Post('first-task')
+  async lockFirstTask(@Body() body: { userId?: string }) {
+    const userId = body.userId;
+    if (!userId) {
+      return { completed: false, firstTaskCompletedAt: null };
+    }
+    const user = await this.usersService.lockFirstTask(userId);
+    return {
+      completed: Boolean(user?.firstTaskCompletedAt),
+      firstTaskCompletedAt: user?.firstTaskCompletedAt ?? null,
     };
   }
 
@@ -127,6 +154,23 @@ export class UsersController {
         favoriteColor: user.favoriteColor,
         participationYears: user.participationYears,
         picture: user.picture,
+      })),
+    };
+  }
+
+  @Get('first-task-results')
+  @Header('Cache-Control', 'no-store')
+  async listFirstTaskResults() {
+    const users = await this.usersService.getFirstTaskResults();
+    return {
+      users: users.map((user) => ({
+        id: user.id,
+        name: user.name,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        nickname: user.nickname,
+        picture: user.picture,
+        firstTaskCompletedAt: user.firstTaskCompletedAt,
       })),
     };
   }
