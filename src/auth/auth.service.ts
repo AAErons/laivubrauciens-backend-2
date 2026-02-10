@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/
 import { ConfigService } from '@nestjs/config';
 import { OAuth2Client } from 'google-auth-library';
 import * as bcrypt from 'bcryptjs';
+import * as jwt from 'jsonwebtoken';
 
 import { UsersService } from '../users/users.service';
 
@@ -18,6 +19,14 @@ export class AuthService {
       throw new Error('GOOGLE_CLIENT_ID is not configured');
     }
     this.client = new OAuth2Client(clientId);
+  }
+
+  private signToken(userId: string) {
+    const secret = this.configService.get<string>('JWT_SECRET') ?? process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET is not configured');
+    }
+    return jwt.sign({ sub: userId }, secret, { expiresIn: '7d' });
   }
 
   async loginWithGoogle(credential?: string) {
@@ -42,6 +51,7 @@ export class AuthService {
       picture: payload.picture,
     });
 
+    const token = this.signToken(user.id);
     return {
       user: {
         id: user.id,
@@ -59,6 +69,7 @@ export class AuthService {
         picture: user.picture,
         firstTaskCompletedAt: user.firstTaskCompletedAt,
       },
+      token,
     };
   }
 
@@ -90,6 +101,7 @@ export class AuthService {
       passwordHash,
     });
 
+    const token = this.signToken(user.id);
     return {
       user: {
         id: user.id,
@@ -107,6 +119,7 @@ export class AuthService {
         picture: user.picture,
         firstTaskCompletedAt: user.firstTaskCompletedAt,
       },
+      token,
     };
   }
 
@@ -128,6 +141,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    const token = this.signToken(user.id);
     return {
       user: {
         id: user.id,
@@ -145,6 +159,7 @@ export class AuthService {
         picture: user.picture,
         firstTaskCompletedAt: user.firstTaskCompletedAt,
       },
+      token,
     };
   }
 }

@@ -1,10 +1,15 @@
-import { Body, Controller, Get, Header, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Header, Post, Query, Headers, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import * as jwt from 'jsonwebtoken';
 
 import { UsersService } from './users.service';
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @Post('profile')
   async updateProfile(
@@ -173,5 +178,51 @@ export class UsersController {
         firstTaskCompletedAt: user.firstTaskCompletedAt,
       })),
     };
+  }
+
+  @Get('highscore-results')
+  @Header('Cache-Control', 'no-store')
+  async listHighScoreResults() {
+    const users = await this.usersService.getHighScoreResults();
+    return {
+      users: users.map((user) => ({
+        id: user.id,
+        name: user.name,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        highScore: user.highScore ?? 0,
+      })),
+    };
+  }
+
+  @Post('highscore')
+  async submitHighScore(
+    @Body() body: { score?: number },
+    @Headers('authorization') authorization?: string,
+  ) {
+    const token = authorization?.startsWith('Bearer ') ? authorization.slice(7) : undefined;
+    if (!token) {
+      throw new UnauthorizedException('Missing token');
+    }
+    const secret = this.configService.get<string>('JWT_SECRET') ?? process.env.JWT_SECRET;
+    if (!secret) {
+      throw new UnauthorizedException('JWT secret missing');
+    }
+    let payload: { sub?: string };
+    try {
+      payload = jwt.verify(token, secret) as { sub?: string };
+    } catch {
+      throw new UnauthorizedException('Invalid token');
+    }
+    const userId = payload.sub;
+    if (!userId) {
+      throw new UnauthorizedException('Invalid token payload');
+    }
+    const score = body.score ?? 0;
+    const result = await this.usersService.submitHighScore(userId, score);
+    if (!result) {
+      return { highScore: null, updated: false };
+    }
+    return result;
   }
 }

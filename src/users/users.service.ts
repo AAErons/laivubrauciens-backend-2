@@ -179,6 +179,32 @@ export class UsersService {
       .exec();
   }
 
+  async getHighScoreResults(): Promise<UserDocument[]> {
+    return this.userModel
+      .find({ highScore: { $gt: 0 } })
+      .sort({ highScore: -1 })
+      .exec();
+  }
+
+  async submitHighScore(userId: string, score: number) {
+    const user = await this.userModel.findById(userId).exec();
+    if (!user) {
+      return null;
+    }
+    const safeScore = Number.isFinite(score) ? Math.max(0, Math.floor(score)) : 0;
+    const currentHigh = user.highScore ?? 0;
+    let updated = false;
+    if (safeScore > currentHigh) {
+      user.highScore = safeScore;
+      updated = true;
+      await user.save();
+    }
+    return {
+      highScore: user.highScore ?? currentHigh,
+      updated,
+    };
+  }
+
   private configureCloudinary(cloudinaryUrl: string) {
     try {
       const parsed = new URL(cloudinaryUrl);

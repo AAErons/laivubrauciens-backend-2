@@ -52,6 +52,9 @@ export class User {
 
   @Prop()
   firstTaskCompletedAt?: Date;
+
+  @Prop({ default: 0 })
+  highScore?: number;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
