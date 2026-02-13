@@ -17,6 +17,15 @@ export class GameSession {
   @Prop({ default: 'laivu' })
   emojiTheme: string;
 
+  @Prop({ default: 0 })
+  comboCount: number;
+
+  @Prop({ type: Date, default: null })
+  lastMatchAt?: Date | null;
+
+  @Prop({ type: Date, default: null })
+  insanityUntil?: Date | null;
+
   @Prop({ type: Date, default: null })
   startedAt?: Date | null;
 

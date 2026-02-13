@@ -37,6 +37,9 @@ export class GameService {
         emojiTheme: theme,
         grid: this.createInitialGrid(this.getEmojiSet(theme)),
         score: 0,
+        comboCount: 0,
+        lastMatchAt: null,
+        insanityUntil: null,
         durationSeconds: 60,
         status: 'ready',
         bombs: 1,
@@ -65,6 +68,9 @@ export class GameService {
       session.emojiTheme = theme;
       session.grid = this.createInitialGrid(this.getEmojiSet(theme));
       session.score = 0;
+      session.comboCount = 0;
+      session.lastMatchAt = null;
+      session.insanityUntil = null;
       session.bombs = 1;
       session.crystals = 1;
       session.bombDropChance = 0.02;
@@ -247,6 +253,8 @@ export class GameService {
       upgradeTier: session.upgradeTier,
       upgradeChoices: session.upgradeChoices,
       hasMoves: this.hasPossibleMoves(session.grid),
+      comboCount: session.comboCount,
+      insanityUntil: session.insanityUntil,
     };
   }
 
@@ -291,6 +299,10 @@ export class GameService {
   private resolveMatches(session: GameDocument) {
     let { matches, runs } = this.getMatchRuns(session.grid);
     while (matches.size > 0) {
+      this.applyComboState(session);
+      if (this.isInsanityActive(session)) {
+        matches = this.expandInsanityMatches(matches);
+      }
       this.applyRunScore(session, runs);
       if (Math.random() < session.bombDropChance) {
         session.bombs += 1;
@@ -304,6 +316,42 @@ export class GameService {
       this.collapseGrid(session.grid, this.getEmojiSet(session.emojiTheme));
       ({ matches, runs } = this.getMatchRuns(session.grid));
     }
+  }
+
+  private applyComboState(session: GameDocument) {
+    const now = Date.now();
+    const last = session.lastMatchAt?.getTime() ?? 0;
+    if (!last || now - last > 1500) {
+      session.comboCount = 1;
+    } else {
+      session.comboCount += 1;
+    }
+    session.lastMatchAt = new Date(now);
+    if (session.comboCount >= 10) {
+      session.insanityUntil = new Date(now + 3000);
+    }
+  }
+
+  private isInsanityActive(session: GameDocument) {
+    if (!session.insanityUntil) {
+      return false;
+    }
+    return Date.now() <= session.insanityUntil.getTime();
+  }
+
+  private expandInsanityMatches(matches: Set<number>) {
+    const expanded = new Set<number>(matches);
+    matches.forEach((index) => {
+      const row = Math.floor(index / GAME_SIZE);
+      const col = index % GAME_SIZE;
+      for (let c = 0; c < GAME_SIZE; c += 1) {
+        expanded.add(row * GAME_SIZE + c);
+      }
+      for (let r = 0; r < GAME_SIZE; r += 1) {
+        expanded.add(r * GAME_SIZE + col);
+      }
+    });
+    return expanded;
   }
 
   private applyRunScore(session: GameDocument, runs: number[]) {
