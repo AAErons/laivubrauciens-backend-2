@@ -101,6 +101,9 @@ export class GameService {
       return session;
     }
     this.resolveMatches(session);
+    if (!this.hasPossibleMoves(session.grid)) {
+      session.grid = this.createInitialGrid(this.getEmojiSet(session.emojiTheme));
+    }
     await session.save();
     return session;
   }
@@ -122,6 +125,9 @@ export class GameService {
     this.applyScore(session, points);
     this.collapseGrid(session.grid, this.getEmojiSet(session.emojiTheme));
     this.resolveMatches(session);
+    if (!this.hasPossibleMoves(session.grid)) {
+      session.grid = this.createInitialGrid(this.getEmojiSet(session.emojiTheme));
+    }
     await session.save();
     return session;
   }
@@ -149,6 +155,9 @@ export class GameService {
     this.applyScore(session, points);
     this.collapseGrid(session.grid, this.getEmojiSet(session.emojiTheme));
     this.resolveMatches(session);
+    if (!this.hasPossibleMoves(session.grid)) {
+      session.grid = this.createInitialGrid(this.getEmojiSet(session.emojiTheme));
+    }
     await session.save();
     return session;
   }
@@ -237,6 +246,7 @@ export class GameService {
       upgradePending: session.upgradePending,
       upgradeTier: session.upgradeTier,
       upgradeChoices: session.upgradeChoices,
+      hasMoves: this.hasPossibleMoves(session.grid),
     };
   }
 
@@ -408,6 +418,33 @@ export class GameService {
 
   private randomEmoji(emojis: string[]) {
     return emojis[Math.floor(Math.random() * emojis.length)];
+  }
+
+  private hasPossibleMoves(grid: string[]) {
+    for (let row = 0; row < GAME_SIZE; row += 1) {
+      for (let col = 0; col < GAME_SIZE; col += 1) {
+        const index = row * GAME_SIZE + col;
+        const right = col + 1 < GAME_SIZE ? index + 1 : -1;
+        const down = row + 1 < GAME_SIZE ? index + GAME_SIZE : -1;
+        if (right >= 0) {
+          this.swap(grid, index, right);
+          const hasMatch = this.getMatchRuns(grid).matches.size > 0;
+          this.swap(grid, index, right);
+          if (hasMatch) {
+            return true;
+          }
+        }
+        if (down >= 0) {
+          this.swap(grid, index, down);
+          const hasMatch = this.getMatchRuns(grid).matches.size > 0;
+          this.swap(grid, index, down);
+          if (hasMatch) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
   }
 
   private getEmojiSet(theme?: string) {
