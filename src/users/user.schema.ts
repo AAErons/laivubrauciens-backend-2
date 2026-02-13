@@ -47,6 +47,9 @@ export class User {
   @Prop()
   picture?: string;
 
+  @Prop({ default: 'laivu' })
+  gameEmojiTheme?: string;
+
   @Prop()
   passwordHash?: string;
 

@@ -6,7 +6,10 @@ import { GameSession, GameDocument } from './game.schema';
 import { UsersService } from '../users/users.service';
 
 const GAME_SIZE = 5;
-const GAME_EMOJIS = ['⛵', '☀️', '🏖️', '🍺', '😊'];
+const EMOJI_THEMES: Record<string, string[]> = {
+  laivu: ['⛵', '☀️', '🏖️', '🍺', '😊'],
+  auglisi: ['🍎', '🍊', '🍋', '🍇', '🍉'],
+};
 const UPGRADE_THRESHOLDS = [250, 750, 2000];
 const UPGRADE_POOL = ['time', 'multiplier', 'refresh', 'bomb', 'crystal'] as const;
 const UPGRADE_TIERS = [
@@ -26,11 +29,13 @@ export class GameService {
   ) {}
 
   async getOrCreateSession(userId: string) {
+    const theme = await this.usersService.getGameEmojiTheme(userId);
     let session = await this.gameModel.findOne({ userId }).exec();
     if (!session) {
       session = new this.gameModel({
         userId,
-        grid: this.createInitialGrid(),
+        emojiTheme: theme,
+        grid: this.createInitialGrid(this.getEmojiSet(theme)),
         score: 0,
         durationSeconds: 60,
         status: 'ready',
@@ -46,14 +51,19 @@ export class GameService {
         upgradeChoices: [],
       });
       await session.save();
+    } else if (session.status !== 'active' && session.emojiTheme !== theme) {
+      session.emojiTheme = theme;
+      await session.save();
     }
     return session;
   }
 
   async startSession(userId: string, reset = false) {
     const session = await this.getOrCreateSession(userId);
+    const theme = await this.usersService.getGameEmojiTheme(userId);
     if (reset || session.status === 'ended') {
-      session.grid = this.createInitialGrid();
+      session.emojiTheme = theme;
+      session.grid = this.createInitialGrid(this.getEmojiSet(theme));
       session.score = 0;
       session.bombs = 1;
       session.crystals = 1;
@@ -110,7 +120,7 @@ export class GameService {
     });
     const points = Math.round(50 * session.scoreMultiplier);
     this.applyScore(session, points);
-    this.collapseGrid(session.grid);
+    this.collapseGrid(session.grid, this.getEmojiSet(session.emojiTheme));
     this.resolveMatches(session);
     await session.save();
     return session;
@@ -137,7 +147,7 @@ export class GameService {
     });
     const points = Math.round(indices.length * 10 * session.scoreMultiplier);
     this.applyScore(session, points);
-    this.collapseGrid(session.grid);
+    this.collapseGrid(session.grid, this.getEmojiSet(session.emojiTheme));
     this.resolveMatches(session);
     await session.save();
     return session;
@@ -178,8 +188,10 @@ export class GameService {
 
   async refreshGrid(userId: string) {
     const session = await this.getOrCreateSession(userId);
+    const theme = await this.usersService.getGameEmojiTheme(userId);
+    session.emojiTheme = theme;
     this.ensurePlayable(session);
-    session.grid = this.createInitialGrid();
+    session.grid = this.createInitialGrid(this.getEmojiSet(theme));
     await session.save();
     return session;
   }
@@ -279,7 +291,7 @@ export class GameService {
       matches.forEach((index) => {
         session.grid[index] = '';
       });
-      this.collapseGrid(session.grid);
+      this.collapseGrid(session.grid, this.getEmojiSet(session.emojiTheme));
       ({ matches, runs } = this.getMatchRuns(session.grid));
     }
   }
@@ -343,7 +355,7 @@ export class GameService {
     return { matches, runs };
   }
 
-  private collapseGrid(grid: string[]) {
+  private collapseGrid(grid: string[], emojis: string[]) {
     for (let col = 0; col < GAME_SIZE; col += 1) {
       const stack: string[] = [];
       for (let row = GAME_SIZE - 1; row >= 0; row -= 1) {
@@ -357,16 +369,16 @@ export class GameService {
       }
       for (let row = 0; row < GAME_SIZE; row += 1) {
         if (grid[row * GAME_SIZE + col] === '') {
-          grid[row * GAME_SIZE + col] = this.randomEmoji();
+          grid[row * GAME_SIZE + col] = this.randomEmoji(emojis);
         }
       }
     }
   }
 
-  private createInitialGrid() {
-    let grid = Array.from({ length: GAME_SIZE * GAME_SIZE }, () => this.randomEmoji());
+  private createInitialGrid(emojis: string[]) {
+    let grid = Array.from({ length: GAME_SIZE * GAME_SIZE }, () => this.randomEmoji(emojis));
     while (this.getMatchRuns(grid).matches.size > 0) {
-      grid = Array.from({ length: GAME_SIZE * GAME_SIZE }, () => this.randomEmoji());
+      grid = Array.from({ length: GAME_SIZE * GAME_SIZE }, () => this.randomEmoji(emojis));
     }
     return grid;
   }
@@ -394,8 +406,12 @@ export class GameService {
     return shuffled.slice(0, 3);
   }
 
-  private randomEmoji() {
-    return GAME_EMOJIS[Math.floor(Math.random() * GAME_EMOJIS.length)];
+  private randomEmoji(emojis: string[]) {
+    return emojis[Math.floor(Math.random() * emojis.length)];
+  }
+
+  private getEmojiSet(theme?: string) {
+    return EMOJI_THEMES[theme ?? 'laivu'] ?? EMOJI_THEMES.laivu;
   }
 
   private isIndexValid(index: number) {

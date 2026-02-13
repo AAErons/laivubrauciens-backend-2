@@ -14,6 +14,9 @@ export class GameSession {
   @Prop({ default: 0 })
   score: number;
 
+  @Prop({ default: 'laivu' })
+  emojiTheme: string;
+
   @Prop({ type: Date, default: null })
   startedAt?: Date | null;
 

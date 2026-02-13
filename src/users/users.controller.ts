@@ -27,6 +27,7 @@ export class UsersController {
       pastExperience?: string;
       showProfile?: boolean;
       picture?: string;
+      gameEmojiTheme?: string;
     },
   ) {
     const userId = body.userId;
@@ -47,6 +48,7 @@ export class UsersController {
       pastExperience: body.pastExperience,
       showProfile: body.showProfile,
       picture: body.picture,
+      gameEmojiTheme: body.gameEmojiTheme,
     });
 
     if (!user) {
@@ -68,6 +70,7 @@ export class UsersController {
         pastExperience: user.pastExperience,
         showProfile: user.showProfile,
         picture: user.picture,
+        gameEmojiTheme: user.gameEmojiTheme,
         firstTaskCompletedAt: user.firstTaskCompletedAt,
       },
     };
@@ -113,6 +116,7 @@ export class UsersController {
         participationYears: user.participationYears,
         showProfile: user.showProfile,
         picture: user.picture,
+        gameEmojiTheme: user.gameEmojiTheme,
         firstTaskCompletedAt: user.firstTaskCompletedAt,
       },
     };

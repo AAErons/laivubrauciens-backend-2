@@ -103,6 +103,7 @@ export class UsersService {
       pastExperience?: string;
       showProfile?: boolean;
       picture?: string;
+      gameEmojiTheme?: string;
     },
   ): Promise<UserDocument | null> {
     const updated = await this.userModel
@@ -121,6 +122,7 @@ export class UsersService {
             pastExperience: profile.pastExperience,
             showProfile: profile.showProfile,
             picture: profile.picture,
+            gameEmojiTheme: profile.gameEmojiTheme,
           },
         },
         { new: true },
@@ -203,6 +205,11 @@ export class UsersService {
       highScore: user.highScore ?? currentHigh,
       updated,
     };
+  }
+
+  async getGameEmojiTheme(userId: string): Promise<string> {
+    const user = await this.userModel.findById(userId).exec();
+    return user?.gameEmojiTheme ?? 'laivu';
   }
 
   private configureCloudinary(cloudinaryUrl: string) {
