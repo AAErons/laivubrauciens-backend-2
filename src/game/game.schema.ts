@@ -26,6 +26,15 @@ export class GameSession {
   @Prop({ type: Date, default: null })
   insanityUntil?: Date | null;
 
+  @Prop({ default: 10 })
+  comboTarget: number;
+
+  @Prop({ default: 2000 })
+  comboWindowMs: number;
+
+  @Prop({ default: 3000 })
+  insanityDurationMs: number;
+
   @Prop({ type: Date, default: null })
   startedAt?: Date | null;
 
@@ -50,7 +59,7 @@ export class GameSession {
   @Prop({ default: 1 })
   scoreMultiplier: number;
 
-  @Prop({ default: 10 })
+  @Prop({ default: 5 })
   refreshBase: number;
 
   @Prop({ default: 0 })

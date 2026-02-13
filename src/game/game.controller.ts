@@ -83,7 +83,14 @@ export class GameController {
     const userId = this.getUserId(authorization);
     const session = await this.gameService.applyUpgrade(
       userId,
-      (body.choice ?? '') as 'time' | 'multiplier' | 'refresh' | 'bomb',
+      (body.choice ?? '') as
+        | 'time'
+        | 'multiplier'
+        | 'bomb'
+        | 'crystal'
+        | 'combo'
+        | 'insanity'
+        | 'refresh',
     );
     return this.gameService.toResponse(session);
   }

@@ -11,13 +11,17 @@ const EMOJI_THEMES: Record<string, string[]> = {
   auglisi: ['🍎', '🍊', '🍋', '🍇', '🍉'],
 };
 const UPGRADE_THRESHOLDS = [250, 750, 2000];
-const UPGRADE_POOL = ['time', 'multiplier', 'refresh', 'bomb', 'crystal'] as const;
-const UPGRADE_TIERS = [
-  { time: 10, multiplier: 2, bomb: 0.05, crystal: 0.02, refreshDelta: -3, refreshNoCooldown: false },
-  { time: 30, multiplier: 3, bomb: 0.15, crystal: 0.05, refreshDelta: -6, refreshNoCooldown: false },
-  { time: 60, multiplier: 4, bomb: 0.35, crystal: 0.2, refreshDelta: 0, refreshNoCooldown: true },
+const UPGRADE_POOLS = [
+  ['time', 'multiplier', 'bomb', 'crystal', 'combo', 'insanity'],
+  ['time', 'multiplier', 'bomb', 'crystal', 'combo', 'insanity'],
+  ['time', 'multiplier', 'bomb', 'crystal', 'combo', 'insanity', 'refresh'],
 ] as const;
-type UpgradeChoice = (typeof UPGRADE_POOL)[number];
+const UPGRADE_TIERS = [
+  { time: 20, multiplier: 2, bomb: 0.07, crystal: 0.05, combo: 1, insanity: 1000, refresh: false },
+  { time: 45, multiplier: 2, bomb: 0.2, crystal: 0.12, combo: 2, insanity: 2000, refresh: false },
+  { time: 90, multiplier: 3, bomb: 0.4, crystal: 0.3, combo: 3, insanity: 3000, refresh: true },
+] as const;
+type UpgradeChoice = (typeof UPGRADE_POOLS)[number][number];
 
 type MatchResult = { matches: Set<number>; runs: number[] };
 
@@ -40,6 +44,9 @@ export class GameService {
         comboCount: 0,
         lastMatchAt: null,
         insanityUntil: null,
+        comboTarget: 10,
+        comboWindowMs: 2000,
+        insanityDurationMs: 3000,
         durationSeconds: 60,
         status: 'ready',
         bombs: 1,
@@ -47,12 +54,15 @@ export class GameService {
         bombDropChance: 0.02,
         crystalDropChance: 0.01,
         scoreMultiplier: 1,
-        refreshBase: 10,
+        refreshBase: 5,
         upgradeIndex: 0,
         upgradeTier: -1,
         upgradePending: false,
         upgradeChoices: [],
       });
+      await session.save();
+    } else if (session.comboWindowMs !== 2000) {
+      session.comboWindowMs = 2000;
       await session.save();
     } else if (session.status !== 'active' && session.emojiTheme !== theme) {
       session.emojiTheme = theme;
@@ -71,12 +81,15 @@ export class GameService {
       session.comboCount = 0;
       session.lastMatchAt = null;
       session.insanityUntil = null;
+      session.comboTarget = 10;
+      session.comboWindowMs = 2000;
+      session.insanityDurationMs = 3000;
       session.bombs = 1;
       session.crystals = 1;
       session.bombDropChance = 0.02;
       session.crystalDropChance = 0.01;
       session.scoreMultiplier = 1;
-      session.refreshBase = 10;
+      session.refreshBase = 5;
       session.upgradeIndex = 0;
       session.upgradeTier = -1;
       session.upgradePending = false;
@@ -180,23 +193,42 @@ export class GameService {
     if (choice === 'time') {
       session.durationSeconds = Math.max(0, session.durationSeconds + tier.time);
     } else if (choice === 'multiplier') {
-      session.scoreMultiplier = tier.multiplier;
-    } else if (choice === 'refresh') {
-      if (tier.refreshNoCooldown) {
-        session.refreshBase = 0;
-      } else {
-        session.refreshBase = Math.max(0, session.refreshBase + tier.refreshDelta);
-      }
+      session.scoreMultiplier = Math.max(1, session.scoreMultiplier + tier.multiplier);
     } else if (choice === 'bomb') {
       session.bombDropChance = Math.min(1, session.bombDropChance + tier.bomb);
     } else if (choice === 'crystal') {
       session.crystalDropChance = Math.min(1, session.crystalDropChance + tier.crystal);
+    } else if (choice === 'combo') {
+      session.comboTarget = Math.max(3, session.comboTarget - tier.combo);
+    } else if (choice === 'insanity') {
+      session.insanityDurationMs = Math.max(
+        1000,
+        session.insanityDurationMs + tier.insanity,
+      );
+    } else if (choice === 'refresh') {
+      if (tier.refresh) {
+        session.refreshBase = 0;
+      }
     }
     session.upgradePending = false;
     session.upgradeChoices = [];
     session.upgradeTier = -1;
-    session.startedAt = new Date();
-    session.status = 'active';
+    const nextThreshold = UPGRADE_THRESHOLDS[session.upgradeIndex];
+    if (
+      nextThreshold !== undefined &&
+      session.score >= nextThreshold &&
+      !session.upgradePending
+    ) {
+      session.upgradePending = true;
+      session.upgradeChoices = this.pickUpgradeChoices(session.upgradeIndex);
+      session.status = 'upgrade';
+      session.startedAt = null;
+      session.upgradeTier = session.upgradeIndex;
+      session.upgradeIndex = Math.min(session.upgradeIndex + 1, UPGRADE_THRESHOLDS.length);
+    } else {
+      session.startedAt = new Date();
+      session.status = 'active';
+    }
     await session.save();
     return session;
   }
@@ -255,6 +287,9 @@ export class GameService {
       hasMoves: this.hasPossibleMoves(session.grid),
       comboCount: session.comboCount,
       insanityUntil: session.insanityUntil,
+      comboTarget: session.comboTarget,
+      comboWindowMs: session.comboWindowMs,
+      insanityDurationMs: session.insanityDurationMs,
     };
   }
 
@@ -287,7 +322,7 @@ export class GameService {
       !session.upgradePending
     ) {
       session.upgradePending = true;
-      session.upgradeChoices = this.pickUpgradeChoices();
+      session.upgradeChoices = this.pickUpgradeChoices(session.upgradeIndex);
       session.status = 'upgrade';
       session.startedAt = null;
       session.upgradeTier = session.upgradeIndex;
@@ -298,12 +333,19 @@ export class GameService {
 
   private resolveMatches(session: GameDocument) {
     let { matches, runs } = this.getMatchRuns(session.grid);
+    let isPlayerMatch = true;
     while (matches.size > 0) {
-      this.applyComboState(session);
-      if (this.isInsanityActive(session)) {
+      this.applyComboState(session, Math.max(1, runs.length));
+      const insanityActive = this.isInsanityActive(session);
+      if (insanityActive && isPlayerMatch) {
         matches = this.expandInsanityMatches(matches);
       }
-      this.applyRunScore(session, runs);
+      if (insanityActive && isPlayerMatch) {
+        const points = Math.round(matches.size * 10 * session.scoreMultiplier);
+        this.applyScore(session, points);
+      } else {
+        this.applyRunScore(session, runs);
+      }
       if (Math.random() < session.bombDropChance) {
         session.bombs += 1;
       }
@@ -315,20 +357,33 @@ export class GameService {
       });
       this.collapseGrid(session.grid, this.getEmojiSet(session.emojiTheme));
       ({ matches, runs } = this.getMatchRuns(session.grid));
+      isPlayerMatch = false;
     }
   }
 
-  private applyComboState(session: GameDocument) {
+  private applyComboState(session: GameDocument, matchesCount: number) {
     const now = Date.now();
-    const last = session.lastMatchAt?.getTime() ?? 0;
-    if (!last || now - last > 1500) {
-      session.comboCount = 1;
-    } else {
-      session.comboCount += 1;
+    if (session.insanityUntil && now > session.insanityUntil.getTime()) {
+      session.insanityUntil = null;
+      session.comboCount = 0;
+      session.lastMatchAt = null;
     }
+    if (this.isInsanityActive(session)) {
+      session.comboCount = 1;
+      session.lastMatchAt = new Date(now);
+      return;
+    }
+    const last = session.lastMatchAt?.getTime() ?? 0;
+    if (!last || now - last > session.comboWindowMs) {
+      session.comboCount = 0;
+    } else {
+      session.comboCount += 0;
+    }
+    session.comboCount += matchesCount;
     session.lastMatchAt = new Date(now);
-    if (session.comboCount >= 10) {
-      session.insanityUntil = new Date(now + 3000);
+    if (session.comboCount >= session.comboTarget) {
+      session.insanityUntil = new Date(now + session.insanityDurationMs);
+      session.comboCount = 1;
     }
   }
 
@@ -459,8 +514,9 @@ export class GameService {
     return indices;
   }
 
-  private pickUpgradeChoices(): UpgradeChoice[] {
-    const shuffled = [...UPGRADE_POOL].sort(() => Math.random() - 0.5);
+  private pickUpgradeChoices(tierIndex = 0): UpgradeChoice[] {
+    const pool = UPGRADE_POOLS[tierIndex] ?? UPGRADE_POOLS[0];
+    const shuffled = [...pool].sort(() => Math.random() - 0.5);
     return shuffled.slice(0, 3);
   }
 
