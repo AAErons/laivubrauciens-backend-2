@@ -145,6 +145,7 @@ export class SelfieController {
     const entries = await this.selfieService.listPublicApprovedToday();
     return {
       entries: entries.map((entry) => ({
+        id: String((entry as unknown as { _id?: unknown })._id ?? ''),
         url: entry.url,
         category: entry.category,
         createdAt: entry.createdAt,
@@ -157,6 +158,7 @@ export class SelfieController {
     const entries = await this.selfieService.listPublicApproved();
     return {
       entries: entries.map((entry) => ({
+        id: String((entry as unknown as { _id?: unknown })._id ?? ''),
         url: entry.url,
         category: entry.category,
         createdAt: entry.createdAt,
