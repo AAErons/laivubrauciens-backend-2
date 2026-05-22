@@ -53,6 +53,34 @@ export class SelfieService {
     return { entry, created: true };
   }
 
+  async updateTodayEntry(
+    userId: string,
+    payload: {
+      imageBase64?: string;
+      showToOthers?: boolean;
+      category?: string;
+    },
+  ): Promise<SelfieEntry | null> {
+    const dateKey = this.getTodayDateKey();
+    const entry = await this.selfieModel.findOne({ userId, dateKey }).exec();
+    if (!entry) {
+      return null;
+    }
+
+    if (payload.imageBase64) {
+      entry.url = await this.uploadToCloudinary(payload.imageBase64);
+    }
+    if (payload.showToOthers !== undefined) {
+      entry.showToOthers = Boolean(payload.showToOthers);
+    }
+    if (payload.category !== undefined) {
+      entry.category = this.normalizeCategory(payload.category);
+    }
+
+    await entry.save();
+    return entry;
+  }
+
   async listPublicApprovedToday(): Promise<SelfieEntry[]> {
     const dateKey = this.getTodayDateKey();
     return this.selfieModel

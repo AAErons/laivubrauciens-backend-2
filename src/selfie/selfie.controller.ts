@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Post, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Post, Put, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as jwt from 'jsonwebtoken';
 
@@ -78,6 +78,37 @@ export class SelfieController {
         adminApproved: result.entry.adminApproved,
         category: result.entry.category,
         createdAt: result.entry.createdAt,
+      },
+    };
+  }
+
+  @Put('me/today')
+  async update(
+    @Body()
+    body: {
+      imageBase64?: string;
+      showToOthers?: boolean;
+      category?: string;
+    },
+    @Headers('authorization') authorization?: string,
+  ) {
+    const userId = this.getUserId(authorization);
+    const entry = await this.selfieService.updateTodayEntry(userId, {
+      imageBase64: body.imageBase64,
+      showToOthers: body.showToOthers,
+      category: body.category,
+    });
+    if (!entry) {
+      return { entry: null };
+    }
+    return {
+      entry: {
+        url: entry.url,
+        dateKey: entry.dateKey,
+        showToOthers: entry.showToOthers,
+        adminApproved: entry.adminApproved,
+        category: entry.category,
+        createdAt: entry.createdAt,
       },
     };
   }
