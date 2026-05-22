@@ -1,14 +1,25 @@
-import { Body, Controller, Get, Headers, Post, Put, UnauthorizedException } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  Param,
+  Post,
+  Put,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as jwt from 'jsonwebtoken';
 
 import { SelfieService } from './selfie.service';
+import { UsersService } from '../users/users.service';
 
 @Controller('selfie')
 export class SelfieController {
   constructor(
     private readonly selfieService: SelfieService,
     private readonly configService: ConfigService,
+    private readonly usersService: UsersService,
   ) {}
 
   private getUserId(authorization?: string) {
@@ -29,6 +40,15 @@ export class SelfieController {
     } catch {
       throw new UnauthorizedException('Invalid token');
     }
+  }
+
+  private async assertAdmin(authorization?: string) {
+    const userId = this.getUserId(authorization);
+    const isAdmin = await this.usersService.isAdmin(userId);
+    if (!isAdmin) {
+      throw new UnauthorizedException('Admin access required');
+    }
+    return userId;
   }
 
   @Get('me/today')
@@ -55,22 +75,6 @@ export class SelfieController {
     const userId = this.getUserId(authorization);
     const addedDays = await this.selfieService.getAddedDaysCount(userId);
     return { addedDays };
-  }
-
-  @Get('me')
-  async listMine(@Headers('authorization') authorization?: string) {
-    const userId = this.getUserId(authorization);
-    const entries = await this.selfieService.listByUser(userId);
-    return {
-      entries: entries.map((entry) => ({
-        url: entry.url,
-        dateKey: entry.dateKey,
-        showToOthers: entry.showToOthers,
-        adminApproved: entry.adminApproved,
-        category: entry.category,
-        createdAt: entry.createdAt,
-      })),
-    };
   }
 
   @Post()
@@ -145,6 +149,49 @@ export class SelfieController {
         category: entry.category,
         createdAt: entry.createdAt,
       })),
+    };
+  }
+
+  @Get('admin/today')
+  async listAdminToday(@Headers('authorization') authorization?: string) {
+    await this.assertAdmin(authorization);
+    const entries = await this.selfieService.listTodayAll();
+    return {
+      entries: entries.map((entry) => ({
+        id: String((entry as unknown as { _id?: unknown })._id ?? ''),
+        userId: entry.userId,
+        url: entry.url,
+        dateKey: entry.dateKey,
+        showToOthers: entry.showToOthers,
+        adminApproved: entry.adminApproved,
+        category: entry.category,
+        createdAt: entry.createdAt,
+      })),
+    };
+  }
+
+  @Put('admin/:entryId')
+  async setAdminDecision(
+    @Param('entryId') entryId: string,
+    @Body() body: { approved?: boolean },
+    @Headers('authorization') authorization?: string,
+  ) {
+    await this.assertAdmin(authorization);
+    const entry = await this.selfieService.setAdminApproval(entryId, Boolean(body.approved));
+    if (!entry) {
+      return { entry: null };
+    }
+    return {
+      entry: {
+        id: String((entry as unknown as { _id?: unknown })._id ?? ''),
+        userId: entry.userId,
+        url: entry.url,
+        dateKey: entry.dateKey,
+        showToOthers: entry.showToOthers,
+        adminApproved: entry.adminApproved,
+        category: entry.category,
+        createdAt: entry.createdAt,
+      },
     };
   }
 }

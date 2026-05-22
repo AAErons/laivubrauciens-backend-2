@@ -212,6 +212,11 @@ export class UsersService {
     return user?.gameEmojiTheme ?? 'laivu';
   }
 
+  async isAdmin(userId: string): Promise<boolean> {
+    const user = await this.userModel.findById(userId).exec();
+    return Boolean(user?.admin);
+  }
+
   private configureCloudinary(cloudinaryUrl: string) {
     try {
       const parsed = new URL(cloudinaryUrl);

@@ -71,6 +71,7 @@ export class UsersController {
         showProfile: user.showProfile,
         picture: user.picture,
         gameEmojiTheme: user.gameEmojiTheme,
+        admin: user.admin,
         firstTaskCompletedAt: user.firstTaskCompletedAt,
       },
     };
@@ -117,6 +118,7 @@ export class UsersController {
         showProfile: user.showProfile,
         picture: user.picture,
         gameEmojiTheme: user.gameEmojiTheme,
+        admin: user.admin,
         firstTaskCompletedAt: user.firstTaskCompletedAt,
       },
     };

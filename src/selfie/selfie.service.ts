@@ -93,8 +93,19 @@ export class SelfieService {
     return this.selfieModel.countDocuments({ userId }).exec();
   }
 
-  async listByUser(userId: string): Promise<SelfieEntry[]> {
-    return this.selfieModel.find({ userId }).sort({ dateKey: -1 }).exec();
+  async listTodayAll(): Promise<SelfieEntry[]> {
+    const dateKey = this.getTodayDateKey();
+    return this.selfieModel.find({ dateKey }).sort({ createdAt: -1 }).exec();
+  }
+
+  async setAdminApproval(entryId: string, approved: boolean): Promise<SelfieEntry | null> {
+    const entry = await this.selfieModel.findById(entryId).exec();
+    if (!entry) {
+      return null;
+    }
+    entry.adminApproved = approved;
+    await entry.save();
+    return entry;
   }
 
   private getTodayDateKey() {

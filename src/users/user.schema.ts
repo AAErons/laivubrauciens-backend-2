@@ -58,6 +58,9 @@ export class User {
 
   @Prop({ default: 0 })
   highScore?: number;
+
+  @Prop({ default: false })
+  admin?: boolean;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
