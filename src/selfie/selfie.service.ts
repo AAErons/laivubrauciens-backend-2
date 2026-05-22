@@ -1,4 +1,9 @@
-import { ConflictException, Injectable, PayloadTooLargeException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  PayloadTooLargeException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { v2 as cloudinary } from 'cloudinary';
@@ -153,10 +158,17 @@ export class SelfieService {
       this.configureCloudinary(cloudinaryUrl);
     }
 
-    const upload = await cloudinary.uploader.upload(imageBase64, {
-      folder: 'boat_trip/selfie_challenge',
-      resource_type: 'image',
-    });
+    let upload: { secure_url: string };
+    try {
+      upload = await cloudinary.uploader.upload(imageBase64, {
+        folder: 'boat_trip/selfie_challenge',
+        resource_type: 'image',
+      });
+    } catch {
+      throw new BadRequestException(
+        'Neizdevās apstrādāt attēlu. Mēģini JPG vai PNG bildi, vai nofotografē vēlreiz.',
+      );
+    }
 
     return upload.secure_url;
   }
