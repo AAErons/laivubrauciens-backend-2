@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, PayloadTooLargeException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { v2 as cloudinary } from 'cloudinary';
@@ -13,6 +13,7 @@ import {
 @Injectable()
 export class SelfieService {
   private cloudinaryReady = false;
+  private readonly maxImageSizeBytes = 10 * 1024 * 1024;
 
   constructor(
     @InjectModel(SelfieEntry.name) private readonly selfieModel: Model<SelfieEntryDocument>,
@@ -69,6 +70,9 @@ export class SelfieService {
     const entry = await this.selfieModel.findOne({ userId, dateKey }).exec();
     if (!entry) {
       return null;
+    }
+    if (this.getModerationStatus(entry) === 'approved') {
+      throw new ConflictException('Approved entries cannot be edited');
     }
 
     if (payload.imageBase64) {
@@ -133,6 +137,7 @@ export class SelfieService {
   }
 
   private async uploadToCloudinary(imageBase64: string): Promise<string> {
+    this.assertImageSizeLimit(imageBase64);
     const cloudinaryUrl =
       this.configService.get<string>('CLOUDINARY_URL') ?? process.env.CLOUDINARY_URL;
     if (!cloudinaryUrl) {
@@ -149,6 +154,19 @@ export class SelfieService {
     });
 
     return upload.secure_url;
+  }
+
+  private assertImageSizeLimit(imageBase64: string) {
+    const base64Payload = imageBase64.includes(',') ? imageBase64.split(',')[1] ?? '' : imageBase64;
+    if (!base64Payload) {
+      return;
+    }
+    const normalized = base64Payload.replace(/\s/g, '');
+    const padding = normalized.endsWith('==') ? 2 : normalized.endsWith('=') ? 1 : 0;
+    const bytes = Math.floor((normalized.length * 3) / 4) - padding;
+    if (bytes > this.maxImageSizeBytes) {
+      throw new PayloadTooLargeException('bildes maksimālais izmērs ir 10mb.');
+    }
   }
 
   private configureCloudinary(cloudinaryUrl: string) {
