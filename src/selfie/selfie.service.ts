@@ -89,6 +89,10 @@ export class SelfieService {
       .exec();
   }
 
+  async getAddedDaysCount(userId: string): Promise<number> {
+    return this.selfieModel.countDocuments({ userId }).exec();
+  }
+
   private getTodayDateKey() {
     return new Date().toISOString().slice(0, 10);
   }

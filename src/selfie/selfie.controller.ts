@@ -50,6 +50,13 @@ export class SelfieController {
     };
   }
 
+  @Get('me/stats')
+  async getMyStats(@Headers('authorization') authorization?: string) {
+    const userId = this.getUserId(authorization);
+    const addedDays = await this.selfieService.getAddedDaysCount(userId);
+    return { addedDays };
+  }
+
   @Post()
   async create(
     @Body()
