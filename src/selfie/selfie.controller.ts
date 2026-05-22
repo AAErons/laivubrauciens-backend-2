@@ -57,6 +57,22 @@ export class SelfieController {
     return { addedDays };
   }
 
+  @Get('me')
+  async listMine(@Headers('authorization') authorization?: string) {
+    const userId = this.getUserId(authorization);
+    const entries = await this.selfieService.listByUser(userId);
+    return {
+      entries: entries.map((entry) => ({
+        url: entry.url,
+        dateKey: entry.dateKey,
+        showToOthers: entry.showToOthers,
+        adminApproved: entry.adminApproved,
+        category: entry.category,
+        createdAt: entry.createdAt,
+      })),
+    };
+  }
+
   @Post()
   async create(
     @Body()

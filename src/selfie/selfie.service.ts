@@ -93,6 +93,10 @@ export class SelfieService {
     return this.selfieModel.countDocuments({ userId }).exec();
   }
 
+  async listByUser(userId: string): Promise<SelfieEntry[]> {
+    return this.selfieModel.find({ userId }).sort({ dateKey: -1 }).exec();
+  }
+
   private getTodayDateKey() {
     return new Date().toISOString().slice(0, 10);
   }
