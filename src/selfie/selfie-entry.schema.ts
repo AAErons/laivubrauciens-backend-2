@@ -2,6 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
 
 export type SelfieEntryDocument = HydratedDocument<SelfieEntry>;
+export type SelfieModerationStatus = 'pending' | 'approved' | 'rejected';
 
 @Schema({ timestamps: true })
 export class SelfieEntry {
@@ -17,8 +18,12 @@ export class SelfieEntry {
   @Prop({ default: false })
   showToOthers: boolean;
 
-  @Prop({ default: false })
-  adminApproved: boolean;
+  @Prop({ default: 'pending' })
+  moderationStatus: SelfieModerationStatus;
+
+  // Legacy field kept for backward compatibility with old records.
+  @Prop()
+  adminApproved?: boolean;
 
   @Prop({ default: '' })
   category: string;

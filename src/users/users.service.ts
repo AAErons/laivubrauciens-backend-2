@@ -217,6 +217,16 @@ export class UsersService {
     return Boolean(user?.admin);
   }
 
+  async getBasicUsersByIds(userIds: string[]) {
+    if (!userIds.length) {
+      return [];
+    }
+    return this.userModel
+      .find({ _id: { $in: userIds } })
+      .select('firstName lastName name')
+      .exec();
+  }
+
   private configureCloudinary(cloudinaryUrl: string) {
     try {
       const parsed = new URL(cloudinaryUrl);

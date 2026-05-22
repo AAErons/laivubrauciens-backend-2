@@ -4,7 +4,11 @@ import { InjectModel } from '@nestjs/mongoose';
 import { v2 as cloudinary } from 'cloudinary';
 import { Model } from 'mongoose';
 
-import { SelfieEntry, SelfieEntryDocument } from './selfie-entry.schema';
+import {
+  SelfieEntry,
+  SelfieEntryDocument,
+  SelfieModerationStatus,
+} from './selfie-entry.schema';
 
 @Injectable()
 export class SelfieService {
@@ -46,7 +50,7 @@ export class SelfieService {
       url,
       dateKey,
       showToOthers: Boolean(payload.showToOthers),
-      adminApproved: false,
+      moderationStatus: 'pending',
       category: this.normalizeCategory(payload.category),
     });
     await entry.save();
@@ -76,6 +80,8 @@ export class SelfieService {
     if (payload.category !== undefined) {
       entry.category = this.normalizeCategory(payload.category);
     }
+    entry.moderationStatus = 'pending';
+    entry.adminApproved = false;
 
     await entry.save();
     return entry;
@@ -83,10 +89,11 @@ export class SelfieService {
 
   async listPublicApprovedToday(): Promise<SelfieEntry[]> {
     const dateKey = this.getTodayDateKey();
-    return this.selfieModel
-      .find({ dateKey, showToOthers: true, adminApproved: true })
+    const entries = await this.selfieModel
+      .find({ dateKey, showToOthers: true })
       .sort({ createdAt: -1 })
       .exec();
+    return entries.filter((entry) => this.getModerationStatus(entry) === 'approved');
   }
 
   async getAddedDaysCount(userId: string): Promise<number> {
@@ -103,9 +110,18 @@ export class SelfieService {
     if (!entry) {
       return null;
     }
+    entry.moderationStatus = approved ? 'approved' : 'rejected';
     entry.adminApproved = approved;
     await entry.save();
     return entry;
+  }
+
+  getModerationStatus(entry: SelfieEntry): SelfieModerationStatus {
+    const status = (entry as { moderationStatus?: string }).moderationStatus;
+    if (status === 'approved' || status === 'rejected' || status === 'pending') {
+      return status;
+    }
+    return entry.adminApproved ? 'approved' : 'pending';
   }
 
   private getTodayDateKey() {

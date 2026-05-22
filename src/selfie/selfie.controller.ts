@@ -63,7 +63,7 @@ export class SelfieController {
         url: entry.url,
         dateKey: entry.dateKey,
         showToOthers: entry.showToOthers,
-        adminApproved: entry.adminApproved,
+        moderationStatus: this.selfieService.getModerationStatus(entry),
         category: entry.category,
         createdAt: entry.createdAt,
       },
@@ -102,7 +102,7 @@ export class SelfieController {
         url: result.entry.url,
         dateKey: result.entry.dateKey,
         showToOthers: result.entry.showToOthers,
-        adminApproved: result.entry.adminApproved,
+        moderationStatus: this.selfieService.getModerationStatus(result.entry),
         category: result.entry.category,
         createdAt: result.entry.createdAt,
       },
@@ -133,7 +133,7 @@ export class SelfieController {
         url: entry.url,
         dateKey: entry.dateKey,
         showToOthers: entry.showToOthers,
-        adminApproved: entry.adminApproved,
+        moderationStatus: this.selfieService.getModerationStatus(entry),
         category: entry.category,
         createdAt: entry.createdAt,
       },
@@ -156,14 +156,29 @@ export class SelfieController {
   async listAdminToday(@Headers('authorization') authorization?: string) {
     await this.assertAdmin(authorization);
     const entries = await this.selfieService.listTodayAll();
+    const userIds = Array.from(new Set(entries.map((entry) => entry.userId)));
+    const users = await this.usersService.getBasicUsersByIds(userIds);
+    const usersMap = new Map(
+      users.map((user) => [
+        user.id,
+        {
+          firstName: user.firstName,
+          lastName: user.lastName,
+          name: user.name,
+        },
+      ]),
+    );
     return {
       entries: entries.map((entry) => ({
         id: String((entry as unknown as { _id?: unknown })._id ?? ''),
         userId: entry.userId,
+        firstName: usersMap.get(entry.userId)?.firstName,
+        lastName: usersMap.get(entry.userId)?.lastName,
+        name: usersMap.get(entry.userId)?.name,
         url: entry.url,
         dateKey: entry.dateKey,
         showToOthers: entry.showToOthers,
-        adminApproved: entry.adminApproved,
+        moderationStatus: this.selfieService.getModerationStatus(entry),
         category: entry.category,
         createdAt: entry.createdAt,
       })),
@@ -188,7 +203,7 @@ export class SelfieController {
         url: entry.url,
         dateKey: entry.dateKey,
         showToOthers: entry.showToOthers,
-        adminApproved: entry.adminApproved,
+        moderationStatus: this.selfieService.getModerationStatus(entry),
         category: entry.category,
         createdAt: entry.createdAt,
       },
