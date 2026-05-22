@@ -152,6 +152,18 @@ export class SelfieController {
     };
   }
 
+  @Get('public')
+  async listPublic() {
+    const entries = await this.selfieService.listPublicApproved();
+    return {
+      entries: entries.map((entry) => ({
+        url: entry.url,
+        category: entry.category,
+        createdAt: entry.createdAt,
+      })),
+    };
+  }
+
   @Get('admin/today')
   async listAdminToday(@Headers('authorization') authorization?: string) {
     await this.assertAdmin(authorization);

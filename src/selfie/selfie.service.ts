@@ -100,6 +100,11 @@ export class SelfieService {
     return entries.filter((entry) => this.getModerationStatus(entry) === 'approved');
   }
 
+  async listPublicApproved(): Promise<SelfieEntry[]> {
+    const entries = await this.selfieModel.find({ showToOthers: true }).sort({ createdAt: -1 }).exec();
+    return entries.filter((entry) => this.getModerationStatus(entry) === 'approved');
+  }
+
   async getAddedDaysCount(userId: string): Promise<number> {
     return this.selfieModel.countDocuments({ userId }).exec();
   }
