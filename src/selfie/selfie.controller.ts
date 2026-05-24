@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   Headers,
   Param,
   Post,
@@ -73,8 +74,33 @@ export class SelfieController {
   @Get('me/stats')
   async getMyStats(@Headers('authorization') authorization?: string) {
     const userId = this.getUserId(authorization);
-    const addedDays = await this.selfieService.getAddedDaysCount(userId);
+    const addedDays = await this.selfieService.getApprovedDaysCount(userId);
     return { addedDays };
+  }
+
+  @Get('activity-results')
+  @Header('Cache-Control', 'no-store')
+  async listActivityResults() {
+    const active = this.selfieService.isThirdTaskResultsActive();
+    if (!active) {
+      return { active: false, users: [] };
+    }
+    const rows = await this.selfieService.getApprovedActivityLeaderboard();
+    const users = await this.usersService.getBasicUsersByIds(rows.map((row) => row.userId));
+    const usersMap = new Map(users.map((user) => [user.id, user]));
+    return {
+      active: true,
+      users: rows.map((row) => {
+        const user = usersMap.get(row.userId);
+        return {
+          id: row.userId,
+          name: user?.name,
+          firstName: user?.firstName,
+          lastName: user?.lastName,
+          approvedCount: row.approvedCount,
+        };
+      }),
+    };
   }
 
   @Post()
