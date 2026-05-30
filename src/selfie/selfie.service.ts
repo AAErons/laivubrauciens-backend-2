@@ -183,9 +183,18 @@ export class SelfieService {
       .map(({ userId, approvedCount }) => ({ userId, approvedCount }));
   }
 
-  async listTodayAll(): Promise<SelfieEntry[]> {
+  async listAdminEntries(): Promise<SelfieEntry[]> {
     const dateKey = this.getTodayDateKey();
-    return this.selfieModel.find({ dateKey }).sort({ createdAt: -1 }).exec();
+    return this.selfieModel
+      .find({
+        $or: [
+          { dateKey },
+          { moderationStatus: 'pending' },
+          { moderationStatus: { $exists: false }, adminApproved: { $ne: true } },
+        ],
+      })
+      .sort({ createdAt: -1 })
+      .exec();
   }
 
   async setAdminApproval(entryId: string, approved: boolean): Promise<SelfieEntry | null> {

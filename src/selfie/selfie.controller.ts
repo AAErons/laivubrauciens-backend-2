@@ -195,7 +195,7 @@ export class SelfieController {
   @Get('admin/today')
   async listAdminToday(@Headers('authorization') authorization?: string) {
     await this.assertAdmin(authorization);
-    const entries = await this.selfieService.listTodayAll();
+    const entries = await this.selfieService.listAdminEntries();
     const userIds = Array.from(new Set(entries.map((entry) => entry.userId)));
     const users = await this.usersService.getBasicUsersByIds(userIds);
     const usersMap = new Map(
