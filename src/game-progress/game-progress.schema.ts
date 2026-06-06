@@ -47,6 +47,13 @@ export class GameProgress {
   @Prop({ type: [GameProgressNameSchema], default: [] })
   inputs: GameProgressName[];
 
+  /**
+   * Per-user random display order: a one-time permutation of the name indices,
+   * generated on first load and kept stable across sessions.
+   */
+  @Prop({ type: [Number], default: [] })
+  nameOrder: number[];
+
   /** Set once, when every name has been guessed. Drives the 4th-task ranking. */
   @Prop({ type: Date, default: null })
   completedAt?: Date | null;

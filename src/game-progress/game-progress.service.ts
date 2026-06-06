@@ -10,6 +10,7 @@ export type GameProgressResponse = {
   lettersLocked: boolean;
   completedNames: string[];
   currentInputs: Record<string, Record<string, string>>;
+  nameOrder: number[];
   completedAt: string | null;
 };
 
@@ -45,17 +46,28 @@ export class GameProgressService {
   ) {}
 
   async getProgress(userId: string): Promise<GameProgressResponse> {
-    const progress = await this.gameProgressModel.findOne({ userId }).exec();
+    let progress = await this.gameProgressModel.findOne({ userId }).exec();
     if (!progress) {
-      return {
-        selectedLetters: [],
-        lettersLocked: false,
-        completedNames: [],
-        currentInputs: {},
-        completedAt: null,
-      };
+      // Create the document on first load so the random order is fixed once.
+      progress = await this.gameProgressModel.create({
+        userId,
+        nameOrder: this.createNameOrder(),
+      });
+    } else if (!progress.nameOrder || progress.nameOrder.length !== REQUIRED_NAME_COUNT) {
+      progress.nameOrder = this.createNameOrder();
+      await progress.save();
     }
     return this.toResponse(progress);
+  }
+
+  /** Fisher-Yates shuffle of [0 .. REQUIRED_NAME_COUNT - 1]. */
+  private createNameOrder(): number[] {
+    const order = Array.from({ length: REQUIRED_NAME_COUNT }, (_, index) => index);
+    for (let i = order.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+    return order;
   }
 
   async saveProgress(
@@ -132,6 +144,7 @@ export class GameProgressService {
       lettersLocked: Boolean(progress.lettersLocked),
       completedNames: progress.completedNames ?? [],
       currentInputs,
+      nameOrder: progress.nameOrder ?? [],
       completedAt: progress.completedAt ? progress.completedAt.toISOString() : null,
     };
   }
