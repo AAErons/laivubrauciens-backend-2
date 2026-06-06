@@ -26,7 +26,7 @@ export type GameProgressResultRow = {
  * Number of names a player must guess to finish. Kept in sync with the names
  * list in the frontend (front/src/vardi-game/names.ts).
  */
-const REQUIRED_NAME_COUNT = 47;
+const REQUIRED_NAME_COUNT = 48;
 
 export type SaveGameProgressInput = {
   selectedLetters?: unknown;
