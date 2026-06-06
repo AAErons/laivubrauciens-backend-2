@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { PhotosModule } from './photos/photos.module';
 import { UsersModule } from './users/users.module';
 import { GameModule } from './game/game.module';
+import { GameProgressModule } from './game-progress/game-progress.module';
 import { SelfieModule } from './selfie/selfie.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -23,6 +24,7 @@ import { AppService } from './app.service';
     PhotosModule,
     UsersModule,
     GameModule,
+    GameProgressModule,
     SelfieModule,
   ],
   controllers: [AppController],
