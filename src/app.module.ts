@@ -7,6 +7,7 @@ import { PhotosModule } from './photos/photos.module';
 import { UsersModule } from './users/users.module';
 import { GameModule } from './game/game.module';
 import { GameProgressModule } from './game-progress/game-progress.module';
+import { SettingsModule } from './settings/settings.module';
 import { SelfieModule } from './selfie/selfie.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -25,6 +26,7 @@ import { AppService } from './app.service';
     UsersModule,
     GameModule,
     GameProgressModule,
+    SettingsModule,
     SelfieModule,
   ],
   controllers: [AppController],
