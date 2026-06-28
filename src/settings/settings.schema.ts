@@ -17,6 +17,9 @@ export class AppSettings {
 
   @Prop({ type: [[String]], default: [] })
   teamDividerSavedTeams: string[][];
+
+  @Prop({ type: Object, default: {} })
+  teamDividerScores: Record<string, number>;
 }
 
 export const AppSettingsSchema = SchemaFactory.createForClass(AppSettings);

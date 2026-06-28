@@ -8,12 +8,14 @@ export type AppSettingsResponse = {
   vardiGameEnabled: boolean;
   teamDividerPeople: string[];
   teamDividerSavedTeams: string[][];
+  teamDividerScores: Record<string, number>;
 };
 
 export type AppSettingsUpdate = {
   vardiGameEnabled?: boolean;
   teamDividerPeople?: string[];
   teamDividerSavedTeams?: string[][];
+  teamDividerScores?: Record<string, number>;
 };
 
 const SETTINGS_KEY = 'global';
@@ -45,6 +47,9 @@ export class SettingsService {
     if (Array.isArray(update.teamDividerSavedTeams)) {
       $set.teamDividerSavedTeams = this.normalizeTeams(update.teamDividerSavedTeams);
     }
+    if (update.teamDividerScores && typeof update.teamDividerScores === 'object') {
+      $set.teamDividerScores = this.normalizeScores(update.teamDividerScores);
+    }
 
     const settings = await this.settingsModel
       .findOneAndUpdate(
@@ -69,6 +74,7 @@ export class SettingsService {
       vardiGameEnabled: Boolean(settings.vardiGameEnabled),
       teamDividerPeople: this.normalizePeople(settings.teamDividerPeople ?? []),
       teamDividerSavedTeams: this.normalizeTeams(settings.teamDividerSavedTeams ?? []),
+      teamDividerScores: this.normalizeScores(settings.teamDividerScores ?? {}),
     };
   }
 
@@ -92,5 +98,17 @@ export class SettingsService {
       .filter(Array.isArray)
       .map((team) => this.normalizePeople(team))
       .filter((team) => team.length > 0);
+  }
+
+  private normalizeScores(scores: Record<string, number>) {
+    return Object.entries(scores).reduce<Record<string, number>>((normalized, [name, score]) => {
+      const normalizedName = String(name).trim();
+      const normalizedScore = Number(score);
+      if (!normalizedName || !Number.isFinite(normalizedScore)) {
+        return normalized;
+      }
+      normalized[normalizedName] = Math.trunc(normalizedScore);
+      return normalized;
+    }, {});
   }
 }
