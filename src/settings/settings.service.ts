@@ -6,6 +6,14 @@ import { AppSettings, AppSettingsDocument } from './settings.schema';
 
 export type AppSettingsResponse = {
   vardiGameEnabled: boolean;
+  teamDividerPeople: string[];
+  teamDividerSavedTeams: string[][];
+};
+
+export type AppSettingsUpdate = {
+  vardiGameEnabled?: boolean;
+  teamDividerPeople?: string[];
+  teamDividerSavedTeams?: string[][];
 };
 
 const SETTINGS_KEY = 'global';
@@ -23,10 +31,25 @@ export class SettingsService {
   }
 
   async setVardiGameEnabled(enabled: boolean): Promise<AppSettingsResponse> {
+    return this.updateSettings({ vardiGameEnabled: enabled });
+  }
+
+  async updateSettings(update: AppSettingsUpdate): Promise<AppSettingsResponse> {
+    const $set: Partial<AppSettings> & { key: string } = { key: SETTINGS_KEY };
+    if (typeof update.vardiGameEnabled === 'boolean') {
+      $set.vardiGameEnabled = update.vardiGameEnabled;
+    }
+    if (Array.isArray(update.teamDividerPeople)) {
+      $set.teamDividerPeople = this.normalizePeople(update.teamDividerPeople);
+    }
+    if (Array.isArray(update.teamDividerSavedTeams)) {
+      $set.teamDividerSavedTeams = this.normalizeTeams(update.teamDividerSavedTeams);
+    }
+
     const settings = await this.settingsModel
       .findOneAndUpdate(
         { key: SETTINGS_KEY },
-        { $set: { key: SETTINGS_KEY, vardiGameEnabled: enabled } },
+        { $set },
         { new: true, upsert: true, setDefaultsOnInsert: true },
       )
       .exec();
@@ -42,6 +65,32 @@ export class SettingsService {
   }
 
   private toResponse(settings: AppSettingsDocument): AppSettingsResponse {
-    return { vardiGameEnabled: Boolean(settings.vardiGameEnabled) };
+    return {
+      vardiGameEnabled: Boolean(settings.vardiGameEnabled),
+      teamDividerPeople: this.normalizePeople(settings.teamDividerPeople ?? []),
+      teamDividerSavedTeams: this.normalizeTeams(settings.teamDividerSavedTeams ?? []),
+    };
+  }
+
+  private normalizePeople(people: string[]) {
+    const seen = new Set<string>();
+    return people
+      .map((name) => String(name).trim())
+      .filter(Boolean)
+      .filter((name) => {
+        const key = name.toLocaleLowerCase('lv-LV');
+        if (seen.has(key)) {
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
+  }
+
+  private normalizeTeams(teams: string[][]) {
+    return teams
+      .filter(Array.isArray)
+      .map((team) => this.normalizePeople(team))
+      .filter((team) => team.length > 0);
   }
 }

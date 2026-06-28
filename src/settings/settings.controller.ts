@@ -11,6 +11,7 @@ import { ConfigService } from '@nestjs/config';
 import * as jwt from 'jsonwebtoken';
 
 import { SettingsService } from './settings.service';
+import type { AppSettingsUpdate } from './settings.service';
 import { UsersService } from '../users/users.service';
 
 @Controller('settings')
@@ -58,10 +59,10 @@ export class SettingsController {
 
   @Post()
   async updateSettings(
-    @Body() body: { vardiGameEnabled?: boolean },
+    @Body() body: AppSettingsUpdate,
     @Headers('authorization') authorization?: string,
   ) {
     await this.assertAdmin(authorization);
-    return this.settingsService.setVardiGameEnabled(Boolean(body.vardiGameEnabled));
+    return this.settingsService.updateSettings(body);
   }
 }

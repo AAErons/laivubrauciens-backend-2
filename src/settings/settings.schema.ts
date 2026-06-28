@@ -11,6 +11,12 @@ export class AppSettings {
 
   @Prop({ default: false })
   vardiGameEnabled: boolean;
+
+  @Prop({ type: [String], default: [] })
+  teamDividerPeople: string[];
+
+  @Prop({ type: [[String]], default: [] })
+  teamDividerSavedTeams: string[][];
 }
 
 export const AppSettingsSchema = SchemaFactory.createForClass(AppSettings);
