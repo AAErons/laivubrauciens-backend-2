@@ -19,7 +19,6 @@ import {
 export class SelfieService {
   private cloudinaryReady = false;
   private readonly maxImageSizeBytes = 10 * 1024 * 1024;
-  private readonly thirdTaskResultsStartDateKey = '2026-05-25';
 
   constructor(
     @InjectModel(SelfieEntry.name) private readonly selfieModel: Model<SelfieEntryDocument>,
@@ -97,90 +96,9 @@ export class SelfieService {
     return entry;
   }
 
-  async listPublicApprovedToday(): Promise<SelfieEntry[]> {
-    const dateKey = this.getTodayDateKey();
-    const entries = await this.selfieModel
-      .find({ dateKey, showToOthers: true })
-      .sort({ createdAt: -1 })
-      .exec();
-    return entries.filter((entry) => this.getModerationStatus(entry) === 'approved');
-  }
-
-  async listPublicApproved(): Promise<SelfieEntry[]> {
-    const entries = await this.selfieModel.find({ showToOthers: true }).sort({ createdAt: -1 }).exec();
-    return entries.filter((entry) => this.getModerationStatus(entry) === 'approved');
-  }
-
   async getApprovedDaysCount(userId: string): Promise<number> {
     const entries = await this.selfieModel.find({ userId }).exec();
     return entries.filter((entry) => this.getModerationStatus(entry) === 'approved').length;
-  }
-
-  isThirdTaskResultsActive(): boolean {
-    return this.getTodayDateKey() >= this.thirdTaskResultsStartDateKey;
-  }
-
-  async getApprovedActivityLeaderboard(): Promise<Array<{ userId: string; approvedCount: number }>> {
-    if (!this.isThirdTaskResultsActive()) {
-      return [];
-    }
-    const dateKey = this.getTodayDateKey();
-    const [entries, todayEntries] = await Promise.all([
-      this.selfieModel.find({}).exec(),
-      this.selfieModel.find({ dateKey }).exec(),
-    ]);
-    const counts = new Map<string, number>();
-    for (const entry of entries) {
-      if (this.getModerationStatus(entry) !== 'approved') {
-        continue;
-      }
-      counts.set(entry.userId, (counts.get(entry.userId) ?? 0) + 1);
-    }
-
-    const todayLoggedAtByUser = new Map<string, number>();
-    for (const entry of todayEntries) {
-      const loggedAt = entry.createdAt?.getTime() ?? Number.MAX_SAFE_INTEGER;
-      const existing = todayLoggedAtByUser.get(entry.userId);
-      if (existing === undefined || loggedAt < existing) {
-        todayLoggedAtByUser.set(entry.userId, loggedAt);
-      }
-    }
-
-    type LeaderboardRow = {
-      userId: string;
-      approvedCount: number;
-      todayLoggedAt: number | null;
-    };
-
-    const compareTodayTieBreak = (a: LeaderboardRow, b: LeaderboardRow) => {
-      const aLoggedToday = a.todayLoggedAt !== null;
-      const bLoggedToday = b.todayLoggedAt !== null;
-      if (aLoggedToday && !bLoggedToday) {
-        return -1;
-      }
-      if (!aLoggedToday && bLoggedToday) {
-        return 1;
-      }
-      if (aLoggedToday && bLoggedToday) {
-        return (a.todayLoggedAt as number) - (b.todayLoggedAt as number);
-      }
-      return 0;
-    };
-
-    return Array.from(counts.entries())
-      .map(([userId, approvedCount]) => ({
-        userId,
-        approvedCount,
-        todayLoggedAt: todayLoggedAtByUser.get(userId) ?? null,
-      }))
-      .sort((a, b) => {
-        const byCount = b.approvedCount - a.approvedCount;
-        if (byCount !== 0) {
-          return byCount;
-        }
-        return compareTodayTieBreak(a, b);
-      })
-      .map(({ userId, approvedCount }) => ({ userId, approvedCount }));
   }
 
   async listAdminEntries(): Promise<SelfieEntry[]> {

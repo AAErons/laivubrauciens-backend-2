@@ -174,20 +174,6 @@ export class UsersService {
     return user;
   }
 
-  async getFirstTaskResults(): Promise<UserDocument[]> {
-    return this.userModel
-      .find({ firstTaskCompletedAt: { $ne: null } })
-      .sort({ firstTaskCompletedAt: 1 })
-      .exec();
-  }
-
-  async getHighScoreResults(): Promise<UserDocument[]> {
-    return this.userModel
-      .find({ highScore: { $gt: 0 } })
-      .sort({ highScore: -1 })
-      .exec();
-  }
-
   async submitHighScore(userId: string, score: number) {
     const user = await this.userModel.findById(userId).exec();
     if (!user) {

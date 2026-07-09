@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   Get,
-  Header,
   Headers,
   Param,
   Post,
@@ -78,32 +77,7 @@ export class SelfieController {
     return { addedDays };
   }
 
-  @Get('activity-results')
-  @Header('Cache-Control', 'no-store')
-  async listActivityResults() {
-    const active = this.selfieService.isThirdTaskResultsActive();
-    if (!active) {
-      return { active: false, users: [] };
-    }
-    const rows = await this.selfieService.getApprovedActivityLeaderboard();
-    const users = await this.usersService.getBasicUsersByIds(rows.map((row) => row.userId));
-    const usersMap = new Map(users.map((user) => [user.id, user]));
-    return {
-      active: true,
-      users: rows.map((row) => {
-        const user = usersMap.get(row.userId);
-        return {
-          id: row.userId,
-          name: user?.name,
-          firstName: user?.firstName,
-          lastName: user?.lastName,
-          approvedCount: row.approvedCount,
-        };
-      }),
-    };
-  }
-
-  @Post()
+  @Get('me/stats')
   async create(
     @Body()
     body: {
@@ -163,32 +137,6 @@ export class SelfieController {
         category: entry.category,
         createdAt: entry.createdAt,
       },
-    };
-  }
-
-  @Get('public/today')
-  async listPublicToday() {
-    const entries = await this.selfieService.listPublicApprovedToday();
-    return {
-      entries: entries.map((entry) => ({
-        id: String((entry as unknown as { _id?: unknown })._id ?? ''),
-        url: entry.url,
-        category: entry.category,
-        createdAt: entry.createdAt,
-      })),
-    };
-  }
-
-  @Get('public')
-  async listPublic() {
-    const entries = await this.selfieService.listPublicApproved();
-    return {
-      entries: entries.map((entry) => ({
-        id: String((entry as unknown as { _id?: unknown })._id ?? ''),
-        url: entry.url,
-        category: entry.category,
-        createdAt: entry.createdAt,
-      })),
     };
   }
 

@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   Get,
-  Header,
   Headers,
   Post,
   UnauthorizedException,
@@ -38,13 +37,6 @@ export class GameProgressController {
     } catch {
       throw new UnauthorizedException('Invalid token');
     }
-  }
-
-  @Get('results')
-  @Header('Cache-Control', 'no-store')
-  async getResults() {
-    const users = await this.gameProgressService.getResults();
-    return { users };
   }
 
   @Get()

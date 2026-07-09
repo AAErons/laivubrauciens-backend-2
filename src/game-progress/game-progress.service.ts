@@ -14,14 +14,6 @@ export type GameProgressResponse = {
   completedAt: string | null;
 };
 
-export type GameProgressResultRow = {
-  id: string;
-  name?: string;
-  firstName?: string;
-  lastName?: string;
-  vardiCompletedAt: string | null;
-};
-
 /**
  * Number of names a player must guess to finish. Kept in sync with the names
  * list in the frontend (front/src/vardi-game/names.ts).
@@ -104,30 +96,6 @@ export class GameProgressService {
       .exec();
 
     return this.toResponse(progress);
-  }
-
-  async getResults(): Promise<GameProgressResultRow[]> {
-    const finished = await this.gameProgressModel
-      .find({ completedAt: { $ne: null } })
-      .sort({ completedAt: 1 })
-      .exec();
-    if (!finished.length) {
-      return [];
-    }
-    const users = await this.usersService.getBasicUsersByIds(
-      finished.map((entry) => entry.userId),
-    );
-    const usersMap = new Map(users.map((user) => [user.id, user]));
-    return finished.map((entry) => {
-      const user = usersMap.get(entry.userId);
-      return {
-        id: entry.userId,
-        name: user?.name,
-        firstName: user?.firstName,
-        lastName: user?.lastName,
-        vardiCompletedAt: entry.completedAt ? entry.completedAt.toISOString() : null,
-      };
-    });
   }
 
   private toResponse(progress: GameProgressDocument): GameProgressResponse {

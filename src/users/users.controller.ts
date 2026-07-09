@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Header, Post, Query, Headers, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Headers, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as jwt from 'jsonwebtoken';
 
@@ -165,38 +165,6 @@ export class UsersController {
         favoriteColor: user.favoriteColor,
         participationYears: user.participationYears,
         picture: user.picture,
-      })),
-    };
-  }
-
-  @Get('first-task-results')
-  @Header('Cache-Control', 'no-store')
-  async listFirstTaskResults() {
-    const users = await this.usersService.getFirstTaskResults();
-    return {
-      users: users.map((user) => ({
-        id: user.id,
-        name: user.name,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        nickname: user.nickname,
-        picture: user.picture,
-        firstTaskCompletedAt: user.firstTaskCompletedAt,
-      })),
-    };
-  }
-
-  @Get('highscore-results')
-  @Header('Cache-Control', 'no-store')
-  async listHighScoreResults() {
-    const users = await this.usersService.getHighScoreResults();
-    return {
-      users: users.map((user) => ({
-        id: user.id,
-        name: user.name,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        highScore: user.highScore ?? 0,
       })),
     };
   }
