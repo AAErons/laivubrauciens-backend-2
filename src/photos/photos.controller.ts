@@ -8,7 +8,7 @@ export class PhotosController {
 
   @Get('summary')
   async summary() {
-    const years = [2020, 2021, 2022, 2023, 2024, 2025];
+    const years = [2020, 2021, 2022, 2023, 2024, 2025, 2026];
     const summary = await this.photosService.getYearSummary(years);
     return { summary };
   }
